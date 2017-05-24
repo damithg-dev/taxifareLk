@@ -1,5 +1,7 @@
 package com.damithamarasinghe.taxifarelk;
 
+import android.location.Address;
+import android.location.Geocoder;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.Manifest;
@@ -10,6 +12,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.widget.Toast;
 import android.app.FragmentTransaction;
 
@@ -17,9 +20,14 @@ import android.app.FragmentTransaction;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.AutocompleteFilter;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -28,6 +36,10 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
@@ -55,6 +67,37 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+
+        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+        AutocompleteFilter typeFilter = new AutocompleteFilter.Builder()
+                .setTypeFilter(Place.TYPE_COUNTRY).setCountry("LK")
+                .build();
+
+        autocompleteFragment.setFilter(typeFilter);
+
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+
+
+            @Override
+            public void onPlaceSelected(Place place) {
+
+                // TODO: Get info about the selected place.
+                Log.d("Place: ",""+ place.getName());
+                Location location = new Location("selectedplace");
+                location.setLatitude(place.getLatLng().latitude);
+                location.setLongitude(place.getLatLng().longitude);
+                onLocationChanged(location);
+            }
+
+            @Override
+            public void onError(Status status) {
+                // TODO: Handle the error.
+                Log.d("An error occurred: ",""+ status);
+            }
+        });
+
     }
 
 
@@ -127,10 +170,41 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         //Place current location marker
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
         MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(latLng);
-        markerOptions.title("Current Position");
-        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
-        mCurrLocationMarker = mMap.addMarker(markerOptions);
+
+        Geocoder geocoder = new Geocoder(this, Locale.ENGLISH);
+        try {
+            double lat = location.getLatitude();
+            double longi = location.getLongitude();
+
+            List<Address> addresses = geocoder.getFromLocation(lat, longi, 1);
+
+            if(addresses != null) {
+                Address returnedAddress = addresses.get(0);
+                StringBuilder strReturnedAddress = new StringBuilder("Address:\n");
+                for(int i=0; i<returnedAddress.getMaxAddressLineIndex(); i++) {
+                    strReturnedAddress.append(returnedAddress.getAddressLine(i)).append("\n");
+                }
+                markerOptions.title(strReturnedAddress.toString());
+
+                markerOptions.position(latLng);
+                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
+                mCurrLocationMarker = mMap.addMarker(markerOptions);
+
+                Toast.makeText(this,strReturnedAddress.toString(), Toast.LENGTH_LONG).show();
+
+                //.setText(strReturnedAddress.toString());
+
+            }
+            else{
+                // myAddress.setText("No Address returned!");
+            }
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            // myAddress.setText("Canont get Address!");
+        }
+
+
 
         //move map camera
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
@@ -213,4 +287,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             // You can add here other case statements according to your requirement.
         }
     }
+
+
 }
