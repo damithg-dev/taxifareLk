@@ -1,5 +1,6 @@
 package com.damithamarasinghe.taxifarelk;
 
+import android.content.res.Resources;
 import android.location.Address;
 import android.location.Geocoder;
 import android.support.v4.app.FragmentActivity;
@@ -13,6 +14,9 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.EditText;
 import android.widget.Toast;
 import android.app.FragmentTransaction;
 
@@ -34,6 +38,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -41,6 +46,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+
+
+
+
+//((EditText)placeAutocompleteFragment.getView().findViewById(R.id.place_autocomplete_search_input)).setTextSize(10.0f);
 public class MainActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
@@ -52,7 +62,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     Location mLastLocation;
     Marker mCurrLocationMarker;
     LocationRequest mLocationRequest;
-
+    PlaceAutocompleteFragment startfragment;
+    PlaceAutocompleteFragment endfragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,25 +71,62 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_main);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
 
+
+
+
+
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             checkLocationPermission();
         }
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+                .findFragmentById(R.id.map_fragment);
         mapFragment.getMapAsync(this);
 
 
-        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
-                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+        //PlaceAutocompleteFragment
+        startfragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.start_fragment);
+        startfragment.setHint("Search Hail Location");
+
+
+        //PlaceAutocompleteFragment
+        endfragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.end_fragment);
+        endfragment.setHint("Search Destination");
+
         AutocompleteFilter typeFilter = new AutocompleteFilter.Builder()
                 .setTypeFilter(Place.TYPE_COUNTRY).setCountry("LK")
                 .build();
 
-        autocompleteFragment.setFilter(typeFilter);
+        startfragment.setFilter(typeFilter);
+        endfragment.setFilter(typeFilter);
 
-        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
 
+
+
+
+        startfragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+
+            @Override
+            public void onPlaceSelected(Place place) {
+
+                // TODO: Get info about the selected place.
+                Log.d("Place: ",""+ place.getName());
+                Location location = new Location("selectedplace");
+                location.setLatitude(place.getLatLng().latitude);
+                location.setLongitude(place.getLatLng().longitude);
+                onLocationChanged(location);
+            }
+
+            @Override
+            public void onError(Status status) {
+                // TODO: Handle the error.
+                Log.d("An error occurred: ",""+ status);
+            }
+        });
+
+        endfragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
 
             @Override
             public void onPlaceSelected(Place place) {
@@ -113,6 +161,20 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+        try {
+            // Customise the styling of the base map using a JSON object defined
+            // in a raw resource file.
+            boolean success = mMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                            this, R.raw.style_json));
+
+            if (!success) {
+                Log.e("MapsActivityRaw", "Style parsing failed.");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.e("MapsActivityRaw", "Can't find style.", e);
+        }
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
 
         //Initialize Google Play Services
@@ -121,6 +183,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     Manifest.permission.ACCESS_FINE_LOCATION)
                     == PackageManager.PERMISSION_GRANTED) {
                 buildGoogleApiClient();
+
                 mMap.setMyLocationEnabled(true);
             }
         }
@@ -180,17 +243,19 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
             if(addresses != null) {
                 Address returnedAddress = addresses.get(0);
+                //Log.i("jaya wewa " ,""+addresses.toString());
                 StringBuilder strReturnedAddress = new StringBuilder("Address:\n");
-                for(int i=0; i<returnedAddress.getMaxAddressLineIndex(); i++) {
-                    strReturnedAddress.append(returnedAddress.getAddressLine(i)).append("\n");
-                }
-                markerOptions.title(strReturnedAddress.toString());
 
+                String Addres = ""+returnedAddress.getAddressLine(0) +"," +returnedAddress.getAddressLine(1);
+               // Log.i("jaya wewa " ,Addres);
+                markerOptions.title(Addres.toString());
                 markerOptions.position(latLng);
                 markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
                 mCurrLocationMarker = mMap.addMarker(markerOptions);
+                startfragment.setText(Addres);
 
-                Toast.makeText(this,strReturnedAddress.toString(), Toast.LENGTH_LONG).show();
+
+                //Toast.makeText(this,strReturnedAddress.toString(), Toast.LENGTH_LONG).show();
 
                 //.setText(strReturnedAddress.toString());
 
