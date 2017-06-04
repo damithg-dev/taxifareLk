@@ -26,7 +26,9 @@
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_weight="1"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:background="@color/backgroundcolor"
+        android:alpha="0.95">
 
         <fragment
             android:id="@+id/start_fragment"
